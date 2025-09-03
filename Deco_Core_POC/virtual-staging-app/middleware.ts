@@ -33,8 +33,10 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
+    console.log('🔒 MIDDLEWARE: Validating API key:', apiKey.substring(0, 10) + '...');
     // Validate the API key against the API Key Manager
     const validation = await apiKeyManager.validateAPIKey(apiKey);
+    console.log('🔒 MIDDLEWARE: Validation result:', validation.valid ? 'VALID' : 'INVALID');
     
     if (!validation.valid) {
       return new NextResponse(
@@ -50,6 +52,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // API key is valid, add user info to headers for downstream use
+    console.log('🔒 MIDDLEWARE: API key valid! Adding user headers for:', validation.key_info?.user_email);
     const response = NextResponse.next();
     
     if (validation.key_info) {

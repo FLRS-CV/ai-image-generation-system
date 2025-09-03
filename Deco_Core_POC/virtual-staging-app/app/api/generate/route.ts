@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Make request to Flask backend
+    // this goes to flask backend
     const flaskResponse = await fetch(backendUrl, {
       method: 'POST',
       body: forwardFormData,

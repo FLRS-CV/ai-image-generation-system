@@ -1,6 +1,6 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+// indicates client-side component (runs in browser, not server)
+import { useState, useEffect } from 'react'; // useState(manages component state), useEffect (runs code when component mounts or state changes)
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 
 export default function HomePage() {
@@ -54,7 +54,7 @@ export default function HomePage() {
 
 	const validateAPIKeyDebounced = async (key: string) => {
 		if (!key.trim()) return;
-		
+		// validating with api - key - manager
 		setValidating(true);
 		try {
 			const response = await fetch('http://localhost:8004/api/keys/validate', {
@@ -106,6 +106,7 @@ export default function HomePage() {
 			return;
 		}
 		
+		// form being send to middleware then backend (comfy)
 		setLoading(true);
 		try {
 			const form = new FormData();
@@ -118,6 +119,7 @@ export default function HomePage() {
 			form.append('workflow', 'joger.json');
 
 			// Include API key in headers
+			// validation with middleware before generating images
 			const res = await fetch(backendUrl, { 
 				method: 'POST', 
 				body: form,
@@ -125,7 +127,7 @@ export default function HomePage() {
 					'x-api-key': apiKey
 				}
 			});
-			
+			// catch error from middleware 401, 403 and others
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
 				throw new Error((data as any).error || `Request failed: ${res.status}`);
@@ -136,7 +138,7 @@ export default function HomePage() {
 				error?: string;
 				user_info?: { email?: string; quota_remaining?: string };
 			};
-			
+			// if got successfull response from comfy
 			if (data.results && data.results.length > 0) {
 				setResults(data.results);
 				setApiKeyValid(true);
