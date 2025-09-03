@@ -24,7 +24,7 @@ export interface APIKeyValidationResponse {
 export class APIKeyManagerClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:8000') {
+  constructor(baseUrl: string = 'http://localhost:8004') {
     this.baseUrl = baseUrl;
   }
 

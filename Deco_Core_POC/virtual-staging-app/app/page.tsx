@@ -113,7 +113,7 @@ export default function HomePage() {
 			form.append('image_file', imageFile);
 			form.append('prompt_text', prompt);
 			form.append('negative_prompt_text', negativePrompt);
-			form.append('ckpt_name', ckptName);
+			form.append('ckpt_name', ckptName); 
 			form.append('num_images', String(numImages));
 			if (seed) form.append('seed', seed);
 			form.append('workflow', 'joger.json');
