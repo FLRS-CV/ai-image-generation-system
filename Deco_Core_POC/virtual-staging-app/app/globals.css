@@ -114,6 +114,12 @@ body {
 	margin-top: 4px;
 }
 
+.field-info {
+	color: var(--muted);
+	font-size: 12px;
+	margin-top: 4px;
+}
+
 .preview img {
 	width: 100%;
 	height: auto;

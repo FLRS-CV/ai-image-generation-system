@@ -15,6 +15,7 @@ export default function HomePage() {
 	const [numImages, setNumImages] = useState(1);
 	const [apiKey, setApiKey] = useState('');
 	const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
+	const [validating, setValidating] = useState(false);
 	const [quotaInfo, setQuotaInfo] = useState<{ remaining?: number; total?: number } | null>(null);
 	const backendUrl = '/api/generate'; // Use our Next.js API route instead of direct Flask
 
@@ -23,6 +24,7 @@ export default function HomePage() {
 		const savedApiKey = localStorage.getItem('virtual-staging-api-key');
 		if (savedApiKey) {
 			setApiKey(savedApiKey);
+			validateAPIKeyDebounced(savedApiKey);
 		}
 	}, []);
 
@@ -35,14 +37,25 @@ export default function HomePage() {
 		}
 	}, [apiKey]);
 
-	// Function to validate API key in real-time
-	const validateAPIKey = async (key: string) => {
-		if (!key.trim()) {
+	// Debounced API key validation
+	useEffect(() => {
+		if (!apiKey.trim()) {
 			setApiKeyValid(null);
 			setQuotaInfo(null);
 			return;
 		}
+		
+		const timeoutId = setTimeout(() => {
+			validateAPIKeyDebounced(apiKey);
+		}, 500);
 
+		return () => clearTimeout(timeoutId);
+	}, [apiKey]);
+
+	const validateAPIKeyDebounced = async (key: string) => {
+		if (!key.trim()) return;
+		
+		setValidating(true);
 		try {
 			const response = await fetch('http://localhost:8004/api/keys/validate', {
 				method: 'POST',
@@ -54,31 +67,28 @@ export default function HomePage() {
 
 			if (response.ok) {
 				const data = await response.json();
-				setApiKeyValid(data.valid);
-				if (data.valid && data.remaining_quota !== undefined) {
-					setQuotaInfo({ remaining: data.remaining_quota });
+				if (data.valid) {
+					setApiKeyValid(true);
+					setQuotaInfo({
+						remaining: data.key_info?.daily_quota - data.key_info?.current_daily_usage,
+						total: data.key_info?.daily_quota
+					});
+				} else {
+					setApiKeyValid(false);
+					setQuotaInfo(null);
 				}
 			} else {
 				setApiKeyValid(false);
 				setQuotaInfo(null);
 			}
 		} catch (error) {
-			console.error('Error validating API key:', error);
+			console.error('API key validation error:', error);
 			setApiKeyValid(false);
 			setQuotaInfo(null);
+		} finally {
+			setValidating(false);
 		}
 	};
-
-	// Validate API key when it changes (with debounce)
-	useEffect(() => {
-		const timeoutId = setTimeout(() => {
-			if (apiKey) {
-				validateAPIKey(apiKey);
-			}
-		}, 500); // 500ms debounce
-
-		return () => clearTimeout(timeoutId);
-	}, [apiKey]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -158,41 +168,38 @@ export default function HomePage() {
 					<div className="subtitle">Proof of Concept</div>
 				</div>
 			</div>
-			
-			{/* API Key Validation Section - Always Visible */}
-			<div className="card" style={{ marginBottom: '24px' }}>
-				<div className="section-title">API Key Authentication</div>
-				<div className="form">
-					<label className="label">
-						<span>API Key</span>
-						<input
-							className={`input ${apiKeyValid === false ? 'error-input' : apiKeyValid === true ? 'success-input' : ''}`}
-							type="password"
-							value={apiKey}
-							onChange={(e) => setApiKey(e.target.value)}
-							placeholder="sk-proj-..."
-						/>
-						{apiKeyValid === false && <div className="field-error">Invalid API key</div>}
-						{apiKeyValid === true && quotaInfo && (
-							<div className="field-success">
-								✅ Valid API key. Quota remaining: {quotaInfo.remaining || 'Unknown'}
-							</div>
-						)}
-						{apiKeyValid === null && (
-							<div className="helper">
-								Enter your API key to access image generation features. 
-								Get one from <a href="http://localhost:8004" target="_blank" className="link">API Key Manager</a>.
-							</div>
-						)}
-					</label>
+
+			{/* API Key Section - Always at the top */}
+			<div className="grid">
+				<div className="card">
+					<div className="section-title">🔐 API Key Authentication</div>
+					<div className="form">
+						<label className="label">
+							<span>Enter your API key to access the image generation features</span>
+							<input
+								className={`input ${apiKeyValid === false ? 'error-input' : apiKeyValid === true ? 'success-input' : ''}`}
+								type="password"
+								value={apiKey}
+								onChange={(e) => setApiKey(e.target.value)}
+								placeholder="sk-proj-..."
+							/>
+							{validating && <div className="field-info">🔄 Validating API key...</div>}
+							{apiKeyValid === false && <div className="field-error">❌ Invalid API key</div>}
+							{apiKeyValid === true && (
+								<div className="field-success">
+									✅ Valid API key! Quota remaining: {quotaInfo?.remaining || 'Unknown'}/{quotaInfo?.total || 'Unknown'}
+								</div>
+							)}
+						</label>
+					</div>
 				</div>
 			</div>
 
-			{/* Image Generation Inputs - Only Visible When API Key is Valid */}
+			{/* Main Interface - Only show if API key is valid */}
 			{apiKeyValid === true && (
 				<div className="grid">
 					<div className="card">
-						<div className="section-title">Image Generation</div>
+						<div className="section-title">📸 Image Generation</div>
 						<form className="form" onSubmit={handleSubmit}>
 							<label className="label">
 								<span>Upload image</span>
@@ -215,65 +222,76 @@ export default function HomePage() {
 									onChange={(e) => setNegativePrompt(e.target.value)}
 								/>
 							</label>
-						<div className="row">
+							<div className="row">
+								<label className="label">
+									<span>Checkpoint</span>
+									<input className="input" value={ckptName} onChange={(e) => setCkptName(e.target.value)} />
+								</label>
+								<label className="label">
+									<span>Seed (optional)</span>
+									<input
+										className="input"
+										value={seed}
+										onChange={(e) => setSeed(e.target.value)}
+										placeholder="e.g. 123456"
+									/>
+								</label>
+							</div>
 							<label className="label">
-								<span>Checkpoint</span>
-								<input className="input" value={ckptName} onChange={(e) => setCkptName(e.target.value)} />
-							</label>
-							<label className="label">
-								<span>Seed (optional)</span>
+								<span>Number of Images</span>
 								<input
 									className="input"
-									value={seed}
-									onChange={(e) => setSeed(e.target.value)}
-									placeholder="e.g. 123456"
+									type="number"
+									min={1}
+									max={10}
+									value={numImages}
+									onChange={(e) => setNumImages(Number(e.target.value))}
 								/>
 							</label>
-						</div>
-						<label className="label">
-							<span>Number of Images</span>
-							<input
-								className="input"
-								type="number"
-								min={1}
-								max={10}
-								value={numImages}
-								onChange={(e) => setNumImages(Number(e.target.value))}
-							/>
-						</label>
-						<button className="button" type="submit" disabled={loading}>
-							{loading ? 'Generating…' : 'Generate'}
-						</button>
-						{error && <div className="error">{error}</div>}
-					</form>
-				</div>
+							<button className="button" type="submit" disabled={loading}>
+								{loading ? 'Generating…' : 'Generate'}
+							</button>
+							{error && <div className="error">{error}</div>}
+						</form>
+					</div>
 
-				<div className="card preview">
-					<div className="section-title">Output</div>
-					{results.map((r, i) => (
-						<div key={i} className="output-item">
-							{/* Comparison slider */}
-							{imageFile && (
-								<ReactCompareSlider
-									itemOne={<ReactCompareSliderImage src={URL.createObjectURL(imageFile)} alt="Original" />}
-									itemTwo={<ReactCompareSliderImage src={r.image} alt={`Generated ${i + 1}`} />}
-								/>
-							)}
-
-							<div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-								<a className="button" href={r.image} download={`virtual_staging_${i + 1}.png`}>
-									Download
-								</a>
-								{r.file_url && (
-									<a className="link" href={r.file_url} target="_blank" rel="noreferrer">
-										Open saved file
-									</a>
+					<div className="card preview">
+						<div className="section-title">Output</div>
+						{results.map((r, i) => (
+							<div key={i} className="output-item">
+								{/* Comparison slider */}
+								{imageFile && (
+									<ReactCompareSlider
+										itemOne={<ReactCompareSliderImage src={URL.createObjectURL(imageFile)} alt="Original" />}
+										itemTwo={<ReactCompareSliderImage src={r.image} alt={`Generated ${i + 1}`} />}
+									/>
 								)}
+
+								<div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+									<a className="button" href={r.image} download={`virtual_staging_${i + 1}.png`}>
+										Download
+									</a>
+									{r.file_url && (
+										<a className="link" href={r.file_url} target="_blank" rel="noreferrer">
+											Open saved file
+										</a>
+									)}
+								</div>
+								{r.seed !== undefined && <div className="helper">Seed: {r.seed}</div>}
 							</div>
-							{r.seed !== undefined && <div className="helper">Seed: {r.seed}</div>}
-						</div>
-					))}
+						))}
+					</div>
 				</div>
+			)}
+
+			{/* Show message when API key is not valid */}
+			{apiKeyValid === false && (
+				<div className="grid">
+					<div className="card">
+						<div className="section-title">🚫 Access Denied</div>
+						<p>Please enter a valid API key to access the image generation features.</p>
+						<p>You can generate an API key at: <a href="http://localhost:8004" target="_blank" rel="noreferrer">http://localhost:8004</a></p>
+					</div>
 				</div>
 			)}
 		</div>

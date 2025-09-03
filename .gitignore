@@ -85,5 +85,5 @@ logs/
 
 # ComfyUI (if included)
 ComfyUI/
-models/
+
 custom_nodes/
