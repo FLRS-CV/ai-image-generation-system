@@ -28,27 +28,59 @@ A complete FastAPI-based system that combines secure API key management with AI-
 
 ### Prerequisites
 - Python 3.8+
-- ComfyUI server running on port 8188
+- ComfyUI installed and configured
 - Required AI models installed in ComfyUI
 
 ### Installation
+
+**Step 1: Start ComfyUI Server**
+```bash
+# In a separate terminal, navigate to your ComfyUI installation
+cd C:\path\to\your\ComfyUI
+.\venv\Scripts\Activate.ps1  # On Windows
+# source venv/bin/activate    # On Linux/Mac
+
+# Start ComfyUI server (must be running on port 8188)
+python main.py
+```
+
+**Step 2: Install and Run API System**
 
 1. **Clone and setup**:
    ```bash
    git clone https://github.com/FLRS-CV/ai-image-generation-system.git
    cd ai-image-generation-system/api-key-manager
+   
+   # Create virtual environment (recommended)
+   python -m venv venv-virtual-staging
+   .\venv-virtual-staging\Scripts\Activate.ps1  # On Windows
+   # source venv-virtual-staging/bin/activate    # On Linux/Mac
+   
+   # Install dependencies
    pip install -r requirements.txt
    ```
 
-2. **Start the server**:
+2. **Start the API server**:
    ```bash
+   # Make sure ComfyUI is already running in another terminal!
    python run_server.py
+   ```
+
+3. **Verify both services are running**:
+   - **ComfyUI**: Should show startup messages and be accessible
+   - **API Server**: Should display:
+   ```
+   🚀 Starting API Key Manager Server...
+   📍 Server will be available at: http://localhost:8004
+   🔑 API Documentation: http://localhost:8004/docs
    ```
 
 3. **Access the application**:
    - **Virtual Staging**: http://localhost:8004/
    - **Admin Panel**: http://localhost:8004/admin (admin/admin)
    - **API Docs**: http://localhost:8004/docs
+
+> **⚠️ Important**: ComfyUI must be running on port 8188 before starting the API server. The system will fail to generate images if ComfyUI is not accessible.
 
 ## 🎯 How It Works
 
@@ -131,12 +163,23 @@ DATABASE_URL=sqlite:///api_keys.db
 ```
 
 ### ComfyUI Setup
-1. Install ComfyUI with required models:
-   - `juggernaut_reborn.safetensors`
-   - `stable_design_depth_diffusion_pytorch_model.safetensors`
-   - `stable_design_segment_diffusion_pytorch_model.safetensors`
-
-2. Place `joger.json` workflow in ComfyUI directory
+1. **Install ComfyUI** in a separate directory (if not already installed)
+2. **Install required AI models** for virtual staging workflows
+3. **Start ComfyUI server**:
+   ```bash
+   cd /path/to/ComfyUI
+   python main.py
+   ```
+   You should see output like:
+   ```
+   [START] Security scan
+   [DONE] Security scan
+   ** ComfyUI startup time: 2025-09-04 16:05:04.307
+   ** Platform: Windows
+   ** Python version: 3.13.7
+   ** ComfyUI Path: C:\Users\YourName\work\ComfyUI
+   ```
+4. **Configure workflow**: Place your workflow configuration in `joger.json` (customize as needed for your models)
 
 ## 📊 Monitoring & Analytics
 
@@ -156,16 +199,19 @@ DATABASE_URL=sqlite:///api_keys.db
 
 ## 🧪 Testing
 
-Run the test suite:
+Test the system components:
 ```bash
-# Test API endpoints
-python test_api.py
+# Start the server (recommended method)
+python run_server.py
+
+# Alternative: Direct uvicorn command
+uvicorn app.main:app --host 0.0.0.0 --port 8004
 
 # Test ComfyUI connection
-python test_comfy.py
+# Ensure ComfyUI is running on port 8188
 
-# Test virtual staging directly
-python test_virtual_staging.py
+# Test API endpoints using the built-in docs
+# Visit: http://localhost:8004/docs
 ```
 
 ## 📁 Project Structure
@@ -187,9 +233,10 @@ api-key-manager/
 │   ├── models/
 │   │   └── api_key_models.py    # Pydantic schemas
 │   └── main.py                  # FastAPI app + frontend
-├── joger.json                   # ComfyUI workflow
+├── joger.json                   # ComfyUI workflow (customize for your setup)
 ├── requirements.txt             # Dependencies
 ├── run_server.py               # Application launcher
+├── README.md                    # This documentation
 └── VIRTUAL_STAGING_IMPLEMENTATION.md  # Technical documentation
 ```
 
@@ -206,6 +253,42 @@ api-key-manager/
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🆘 Support
+
+### Troubleshooting
+
+**"ComfyUI connection failed" errors:**
+1. Ensure ComfyUI is running: `python main.py` in ComfyUI directory
+2. Check ComfyUI is accessible at `http://localhost:8188`
+3. Verify no firewall is blocking port 8188
+
+**Server won't start:**
+1. Check if port 8004 is already in use
+2. Ensure virtual environment is activated
+3. Verify all dependencies are installed: `pip install -r requirements.txt`
+
+**API key validation fails:**
+1. Check the database file permissions
+2. Verify API key format: `sk-proj-xxxxxxxx`
+3. Ensure middleware is properly configured
+
+### Running Both Services
+You need **two terminal windows**:
+
+**Terminal 1 - ComfyUI Server:**
+```bash
+cd C:\path\to\ComfyUI
+.\venv\Scripts\Activate.ps1
+python main.py
+# Keep this running - DO NOT CLOSE
+```
+
+**Terminal 2 - API Server:**
+```bash
+cd C:\path\to\ai-image-generation-system\api-key-manager
+.\venv-virtual-staging\Scripts\Activate.ps1
+python run_server.py
+# Keep this running - DO NOT CLOSE
+```
 
 - **Issues**: GitHub Issues for bug reports
 - **Documentation**: See `VIRTUAL_STAGING_IMPLEMENTATION.md` for detailed technical information
