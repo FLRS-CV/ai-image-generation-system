@@ -6,6 +6,7 @@ from app.models.api_key_models import (
 )
 from app.services.api_key_service import APIKeyService
 from app.database.models import DatabaseManager
+from app.middleware.auth import verify_admin_credentials
 
 router = APIRouter(prefix="/api/keys", tags=["API Keys"])
 
@@ -20,9 +21,10 @@ def get_api_key_service(db_manager: DatabaseManager = Depends(get_db_manager)):
 @router.post("/", response_model=dict)
 async def create_api_key(
     key_data: APIKeyCreate,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """Create a new API key"""
+    """Create a new API key (Admin only)"""
     try:
         full_key, key_info = api_key_service.generate_api_key(key_data)
         
@@ -50,9 +52,10 @@ async def create_api_key(
 async def list_api_keys(
     user_email: str = None,
     status: str = None,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """List all API keys with optional filtering"""
+    """List all API keys with optional filtering (Admin only)"""
     try:
         api_keys = api_key_service.list_api_keys(user_email, status)
         return APIKeyListResponse(
@@ -65,9 +68,10 @@ async def list_api_keys(
 @router.get("/{key_id}", response_model=APIKeyResponse)
 async def get_api_key(
     key_id: int,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """Get a specific API key by ID"""
+    """Get a specific API key by ID (Admin only)"""
     try:
         key_info = api_key_service.get_api_key_by_id(key_id)
         if not key_info:
@@ -80,9 +84,10 @@ async def get_api_key(
 async def update_api_key(
     key_id: int,
     update_data: APIKeyUpdate,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """Update an API key's properties"""
+    """Update an API key's properties (Admin only)"""
     try:
         updated_key = api_key_service.update_api_key(key_id, update_data)
         if not updated_key:
@@ -94,9 +99,10 @@ async def update_api_key(
 @router.delete("/{key_id}")
 async def delete_api_key(
     key_id: int,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """Permanently delete an API key"""
+    """Permanently delete an API key (Admin only)"""
     try:
         success = api_key_service.delete_api_key(key_id)
         if not success:
@@ -145,9 +151,10 @@ async def validate_api_key(
 @router.post("/{key_id}/revoke")
 async def revoke_api_key(
     key_id: int,
-    api_key_service: APIKeyService = Depends(get_api_key_service)
+    api_key_service: APIKeyService = Depends(get_api_key_service),
+    admin_user: str = Depends(verify_admin_credentials)
 ):
-    """Revoke an API key (soft delete)"""
+    """Revoke an API key (soft delete) (Admin only)"""
     try:
         success = api_key_service.revoke_api_key(key_id)
         if not success:

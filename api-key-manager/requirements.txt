@@ -1,7 +1,13 @@
-# API Key Manager Dependencies
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-python-multipart==0.0.6
-python-dotenv==1.0.0
-gunicorn==21.2.0
+# Core FastAPI Dependencies
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+python-multipart==0.0.20
+python-dotenv==1.1.1
+
+# Production Server (for deployment)
+gunicorn==23.0.0
+
+# Virtual Staging Dependencies
+websocket-client==1.8.0
+Pillow==11.3.0

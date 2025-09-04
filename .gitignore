@@ -60,6 +60,24 @@ temp_uploads/
 generated/
 outputs/
 
+# API Key Manager - Development Documentation (internal use)
+api-key-manager/COMMIT_STRATEGY.md
+api-key-manager/CLEANUP_SUMMARY.md
+
+# API Key Manager - Deployment Files (platform specific)
+api-key-manager/Procfile
+api-key-manager/railway.json
+api-key-manager/RAILWAY_DEPLOYMENT_CHECKLIST.md
+
+# API Key Manager - Testing and Debug Files (development only)
+api-key-manager/test_*.py
+api-key-manager/test_*.html
+api-key-manager/*_test.py
+api-key-manager/debug_*.py
+
+# API Key Manager - Virtual Environment
+api-key-manager/venv-virtual-staging/
+
 # IDE
 .vscode/
 .idea/
@@ -79,11 +97,32 @@ Thumbs.db
 # API Gateway (excluding for now)
 api-gateway/
 
+# Legacy/Experimental Directories (keeping locally for reference)
+Deco_Core_POC/
+virtual-staging-api/
+
+# Legacy Files (superseded by current implementation)
+server.py
+Wrapper.py
+
+# Testing and Debug Files (development only)
+test_*.py
+test_*.html
+*_test.py
+debug_*.py
+
+# Development Documentation (internal use)
+COMMIT_STRATEGY.md
+INTEGRATION_TESTING.md
+
 # Logs
 *.log
 logs/
 
 # ComfyUI (if included)
 ComfyUI/
+
+# Virtual Environments (API Key Manager specific)
+venv-virtual-staging/
 
 custom_nodes/
