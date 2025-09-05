@@ -22,8 +22,8 @@ async def validate_api_key_optional(
     if not x_api_key:
         return None
     
-    # Validate the API key
-    is_valid, key_info, message = api_key_service.validate_api_key(x_api_key)
+    # Validate the API key with role support (includes super admin)
+    is_valid, key_info, message, role = api_key_service.validate_api_key_with_role(x_api_key)
     
     if not is_valid:
         raise HTTPException(
@@ -31,13 +31,15 @@ async def validate_api_key_optional(
             detail=f"Invalid API key: {message}"
         )
     
-    # Update usage statistics
-    api_key_service.increment_usage(key_info.id)
+    # Update usage statistics (skip for super admin as it has unlimited access)
+    if role and role.value != "superadmin" and key_info:
+        api_key_service.increment_usage(key_info.id)
     
     return {
         "api_key": x_api_key,
         "key_info": key_info.__dict__ if key_info else {},
-        "authenticated": True
+        "authenticated": True,
+        "role": role.value if role else "user"
     }
 
 async def validate_api_key_required(
@@ -53,8 +55,8 @@ async def validate_api_key_required(
             detail="API key is required. Provide it in the X-API-Key header."
         )
     
-    # Validate the API key
-    is_valid, key_info, message = api_key_service.validate_api_key(x_api_key)
+    # Validate the API key with role support (includes super admin)
+    is_valid, key_info, message, role = api_key_service.validate_api_key_with_role(x_api_key)
     
     if not is_valid:
         raise HTTPException(
@@ -62,11 +64,13 @@ async def validate_api_key_required(
             detail=f"Invalid API key: {message}"
         )
     
-    # Update usage statistics
-    api_key_service.increment_usage(key_info.id)
+    # Update usage statistics (skip for super admin as it has unlimited access)
+    if role and role.value != "superadmin" and key_info:
+        api_key_service.increment_usage(key_info.id)
     
     return {
         "api_key": x_api_key,
         "key_info": key_info.__dict__ if key_info else {},
-        "authenticated": True
+        "authenticated": True,
+        "role": role.value if role else "user"
     }

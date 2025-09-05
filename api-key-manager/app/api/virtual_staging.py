@@ -31,6 +31,32 @@ async def generate_virtual_staging(
     - **style**: Furnishing style (currently supports: scandinavian)
     - **X-API-Key**: Required API key in header for authentication
     """
+    return await _generate_staging_internal(image_file, num_images, style, api_key_info)
+
+@router.post("/generate")
+async def generate_virtual_staging_alt(
+    file: UploadFile = File(...),
+    num_images: int = Form(default=1),
+    style: str = Form(default="scandinavian"),
+    api_key_info: dict = Depends(validate_api_key_required)
+):
+    """
+    Generate virtual staging images from an empty room photo (alternative endpoint for frontend)
+    
+    - **file**: Upload an image file of an empty room
+    - **num_images**: Number of variations to generate (1-10)
+    - **style**: Furnishing style (currently supports: scandinavian)
+    - **X-API-Key**: Required API key in header for authentication
+    """
+    return await _generate_staging_internal(file, num_images, style, api_key_info)
+
+async def _generate_staging_internal(
+    image_file: UploadFile,
+    num_images: int,
+    style: str,
+    api_key_info: dict
+):
+    """Internal function to handle virtual staging generation"""
     
     # Log the API key validation success
     print("🔒 MIDDLEWARE: API key validation successful!")
@@ -74,15 +100,24 @@ async def generate_virtual_staging(
         except:
             pass  # Don't fail if cleanup doesn't work
         
-        # Return results
+        # Return results in format expected by frontend
         if result["status"] == "success":
+            # Extract image paths from results
+            images = []
+            for img_result in result["results"]:
+                if "file_path" in img_result:
+                    # Convert absolute path to relative path for web serving
+                    abs_path = img_result["file_path"]
+                    rel_path = os.path.relpath(abs_path, start=os.getcwd())
+                    images.append(rel_path.replace("\\", "/"))  # Use forward slashes for web
+            
             return {
                 "success": True,
-                "message": result["message"],
-                "results": result["results"],
+                "message": f"Successfully generated {len(images)} virtual staging images",
+                "images": images,
                 "metadata": {
                     "style": style,
-                    "num_images": len(result["results"]),
+                    "num_images": len(images),
                     "original_filename": image_file.filename
                 }
             }
@@ -92,6 +127,7 @@ async def generate_virtual_staging(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error generating virtual staging: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/generated/{filename}")

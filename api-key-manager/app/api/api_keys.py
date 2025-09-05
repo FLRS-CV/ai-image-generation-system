@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Request
+from typing import List, Tuple
 from app.models.api_key_models import (
     APIKeyCreate, APIKeyUpdate, APIKeyResponse, APIKeyListResponse,
-    APIKeyValidationRequest, APIKeyValidationResponse
+    APIKeyValidationRequest, APIKeyValidationResponse, UserRole
 )
 from app.services.api_key_service import APIKeyService
 from app.database.models import DatabaseManager
-from app.middleware.auth import verify_admin_credentials
+from app.middleware.auth import (
+    verify_admin_credentials, require_admin_role, require_superadmin_role,
+    get_current_user
+)
 
 router = APIRouter(prefix="/api/keys", tags=["API Keys"])
 
@@ -21,18 +24,48 @@ def get_api_key_service(db_manager: DatabaseManager = Depends(get_db_manager)):
 @router.post("/", response_model=dict)
 async def create_api_key(
     key_data: APIKeyCreate,
-    api_key_service: APIKeyService = Depends(get_api_key_service),
-    admin_user: str = Depends(verify_admin_credentials)
+    request: Request,
+    api_key_service: APIKeyService = Depends(get_api_key_service)
 ):
-    """Create a new API key (Admin only)"""
+    """Create a new API key (Admin+ required, role restrictions apply)"""
     try:
+        # Get current user info
+        current_user = get_current_user(request, api_key_service)
+        if not current_user:
+            # Fallback to basic auth for backward compatibility
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        current_role, current_user_info = current_user
+        
+        # Check if user can create the requested role
+        if not api_key_service.can_create_role(current_role, key_data.role):
+            allowed_roles = []
+            if current_role == UserRole.SUPERADMIN:
+                allowed_roles = ["user", "admin"]
+            elif current_role == UserRole.ADMIN:
+                allowed_roles = ["user"]
+            
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Insufficient permissions. Your role ({current_role.value}) can only create: {', '.join(allowed_roles)}"
+            )
+        
+        # Require minimum admin role for key creation
+        if current_role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admins and super admins can create API keys"
+            )
+        
         full_key, key_info = api_key_service.generate_api_key(key_data)
         
         print("="*80)
         print("🎉 NEW API KEY GENERATED")
         print("="*80)
+        print(f"Created by: {current_user_info.user_email} ({current_role.value})")
         print(f"Name: {key_data.name}")
         print(f"User: {key_data.user_email}")
+        print(f"Role: {key_data.role.value}")
         print(f"Organization: {key_data.organization or 'N/A'}")
         print(f"Daily Quota: {key_data.daily_quota}")
         print(f"Rate Limit: {key_data.rate_limit}/min")
@@ -52,11 +85,25 @@ async def create_api_key(
 async def list_api_keys(
     user_email: str = None,
     status: str = None,
-    api_key_service: APIKeyService = Depends(get_api_key_service),
-    admin_user: str = Depends(verify_admin_credentials)
+    request: Request = None,
+    api_key_service: APIKeyService = Depends(get_api_key_service)
 ):
-    """List all API keys with optional filtering (Admin only)"""
+    """List API keys (Admin+ required)"""
     try:
+        # Get current user info
+        current_user = get_current_user(request, api_key_service)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        current_role, current_user_info = current_user
+        
+        # Require minimum admin role
+        if current_role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admins and super admins can list API keys"
+            )
+        
         api_keys = api_key_service.list_api_keys(user_email, status)
         return APIKeyListResponse(
             api_keys=api_keys,
@@ -118,7 +165,8 @@ async def validate_api_key(
 ):
     """Validate an API key and return its information"""
     try:
-        is_valid, key_info, message = api_key_service.validate_api_key(request.api_key)
+        # Use the enhanced validation that includes super admin check
+        is_valid, key_info, message, role = api_key_service.validate_api_key_with_role(request.api_key)
         
         if not is_valid:
             return APIKeyValidationResponse(
@@ -126,7 +174,17 @@ async def validate_api_key(
                 message=message
             )
         
-        # Check quota and rate limit
+        # For super admin, skip quota checks (unlimited access)
+        if role and role.value == "superadmin":
+            return APIKeyValidationResponse(
+                valid=True,
+                message="Super admin key valid - unlimited access",
+                key_info=key_info,
+                remaining_quota=9999,
+                rate_limit_remaining=9999
+            )
+        
+        # Check quota and rate limit for regular users
         quota_ok, quota_message, quota_info = api_key_service.check_quota_and_rate_limit(key_info.id)
         
         if not quota_ok:
@@ -151,14 +209,30 @@ async def validate_api_key(
 @router.post("/{key_id}/revoke")
 async def revoke_api_key(
     key_id: int,
-    api_key_service: APIKeyService = Depends(get_api_key_service),
-    admin_user: str = Depends(verify_admin_credentials)
+    request: Request,
+    api_key_service: APIKeyService = Depends(get_api_key_service)
 ):
-    """Revoke an API key (soft delete) (Admin only)"""
+    """Revoke an API key (Super Admin only)"""
     try:
+        # Get current user info
+        current_user = get_current_user(request, api_key_service)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        current_role, current_user_info = current_user
+        
+        # Only super admins can revoke keys
+        if current_role != UserRole.SUPERADMIN:
+            raise HTTPException(
+                status_code=403,
+                detail="Only super admins can revoke API keys"
+            )
+        
         success = api_key_service.revoke_api_key(key_id)
         if not success:
             raise HTTPException(status_code=404, detail="API key not found or already revoked")
+        
+        print(f"🚫 API Key {key_id} revoked by {current_user_info.user_email}")
         return {"message": "API key revoked successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

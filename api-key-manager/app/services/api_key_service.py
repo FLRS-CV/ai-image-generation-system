@@ -1,10 +1,11 @@
 import hashlib
 import secrets
 import uuid
+import os
 from datetime import datetime, date, timedelta
 from typing import Optional, Tuple, Dict, List
 from app.database.models import DatabaseManager
-from app.models.api_key_models import APIKeyCreate, APIKeyUpdate, APIKeyResponse, UsageLogResponse
+from app.models.api_key_models import APIKeyCreate, APIKeyUpdate, APIKeyResponse, UsageLogResponse, UserRole
 
 class APIKeyService:
     def __init__(self, db_manager: DatabaseManager):
@@ -24,16 +25,16 @@ class APIKeyService:
         # Insert into database
         query = '''
             INSERT INTO api_keys (
-                key_hash, key_prefix, name, user_email, organization,
+                key_hash, key_prefix, name, user_email, organization, role,
                 daily_quota, rate_limit, created_at, last_quota_reset
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         '''
         
         now = datetime.now()
         params = (
             key_hash, key_prefix, key_data.name, key_data.user_email,
-            key_data.organization, key_data.daily_quota, key_data.rate_limit,
-            now.isoformat(), now.date().isoformat()
+            key_data.organization, key_data.role.value, key_data.daily_quota, 
+            key_data.rate_limit, now.isoformat(), now.date().isoformat()
         )
         
         key_id = self.db_manager.execute_insert(query, params)
@@ -46,6 +47,7 @@ class APIKeyService:
             status="active",
             user_email=key_data.user_email,
             organization=key_data.organization,
+            role=key_data.role.value,
             created_at=now.isoformat(),
             last_used=None,
             revoked_at=None,
@@ -258,6 +260,10 @@ class APIKeyService:
     
     def _row_to_api_key_response(self, row: tuple) -> APIKeyResponse:
         """Convert database row to APIKeyResponse object"""
+        # Database schema:
+        # 0:id, 1:key_hash, 2:key_prefix, 3:name, 4:status, 5:user_email, 6:organization,
+        # 7:created_at, 8:last_used, 9:revoked_at, 10:rate_limit, 11:daily_quota, 
+        # 12:current_daily_usage, 13:last_quota_reset, 14:role
         return APIKeyResponse(
             id=row[0],
             key_prefix=row[2],
@@ -265,6 +271,7 @@ class APIKeyService:
             status=row[4],
             user_email=row[5],
             organization=row[6],
+            role=row[14] if len(row) > 14 and row[14] else "user",  # role is at index 14
             created_at=row[7],
             last_used=row[8],
             revoked_at=row[9],
@@ -273,3 +280,66 @@ class APIKeyService:
             current_daily_usage=row[12],
             last_quota_reset=row[13]
         )
+
+    def validate_super_admin_key(self, api_key: str) -> bool:
+        """Validate if the provided key is the super admin key"""
+        super_admin_key = os.getenv("SUPER_ADMIN_API_KEY", "sk-proj-superadmin-default-key-change-me")
+        return api_key == super_admin_key
+
+    def validate_api_key_with_role(self, api_key: str) -> Tuple[bool, Optional[APIKeyResponse], str, Optional[UserRole]]:
+        """Validate an API key and return key info with role if valid"""
+        # First check if it's the super admin key
+        if self.validate_super_admin_key(api_key):
+            # Create a mock response for super admin
+            super_admin_response = APIKeyResponse(
+                id=-1,  # Special ID for super admin
+                key_prefix="sk-proj-super...",
+                name="Super Administrator",
+                status="active",
+                user_email="superadmin@system.local",
+                organization="System",
+                role=UserRole.SUPERADMIN.value,
+                created_at=datetime.now().isoformat(),
+                last_used=None,
+                revoked_at=None,
+                rate_limit=9999,
+                daily_quota=9999,
+                current_daily_usage=0,
+                last_quota_reset=date.today().isoformat()
+            )
+            return True, super_admin_response, "Super admin key valid", UserRole.SUPERADMIN
+
+        # Regular API key validation
+        is_valid, key_info, message = self.validate_api_key(api_key)
+        if not is_valid:
+            return False, None, message, None
+
+        # Convert role string to enum
+        try:
+            role = UserRole(key_info.role)
+        except ValueError:
+            role = UserRole.USER  # Default fallback
+
+        return True, key_info, message, role
+
+    def check_role_permission(self, user_role: UserRole, required_role: UserRole) -> bool:
+        """Check if user role has permission for the required role"""
+        role_hierarchy = {
+            UserRole.USER: 1,
+            UserRole.ADMIN: 2,
+            UserRole.SUPERADMIN: 3
+        }
+        
+        user_level = role_hierarchy.get(user_role, 0)
+        required_level = role_hierarchy.get(required_role, 0)
+        
+        return user_level >= required_level
+
+    def can_create_role(self, creator_role: UserRole, target_role: UserRole) -> bool:
+        """Check if a role can create another role"""
+        if creator_role == UserRole.SUPERADMIN:
+            return True  # Super admin can create any role
+        elif creator_role == UserRole.ADMIN:
+            return target_role == UserRole.USER  # Admin can only create users
+        else:
+            return False  # Users cannot create any roles

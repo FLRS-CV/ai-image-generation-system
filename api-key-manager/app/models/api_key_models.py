@@ -1,11 +1,18 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from enum import Enum
+
+class UserRole(str, Enum):
+    SUPERADMIN = "superadmin"
+    ADMIN = "admin"
+    USER = "user"
 
 class APIKeyCreate(BaseModel):
     name: str = Field(..., description="Human-readable name for the API key")
     user_email: str = Field(..., description="Email of the key owner")
     organization: Optional[str] = Field(None, description="Organization name")
+    role: UserRole = Field(default=UserRole.USER, description="User role")
     daily_quota: int = Field(default=100, description="Daily request limit")
     rate_limit: int = Field(default=60, description="Requests per minute")
 
@@ -22,6 +29,7 @@ class APIKeyResponse(BaseModel):
     status: str
     user_email: str
     organization: Optional[str]
+    role: str
     created_at: str
     last_used: Optional[str]
     revoked_at: Optional[str]

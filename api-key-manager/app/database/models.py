@@ -23,6 +23,7 @@ class DatabaseManager:
                 status TEXT DEFAULT 'active',
                 user_email TEXT NOT NULL,
                 organization TEXT,
+                role TEXT DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_used TIMESTAMP,
                 revoked_at TIMESTAMP,
@@ -32,6 +33,14 @@ class DatabaseManager:
                 last_quota_reset DATE DEFAULT CURRENT_DATE
             )
         ''')
+        
+        # Add role column to existing tables if it doesn't exist
+        try:
+            cursor.execute('ALTER TABLE api_keys ADD COLUMN role TEXT DEFAULT "user"')
+            print("🔄 Added 'role' column to existing api_keys table")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
         
         # Create Usage Logs table
         cursor.execute('''
@@ -51,6 +60,7 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_key_hash ON api_keys(key_hash)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_email ON api_keys(user_email)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_status ON api_keys(status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_role ON api_keys(role)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_api_key_id ON usage_logs(api_key_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON usage_logs(request_timestamp)')
         

@@ -1,0 +1,67 @@
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Database files
+api_keys.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Virtual environments
+venv/
+venv-virtual-staging/
+env/
+ENV/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Generated images
+generated/
+*.png
+*.jpg
+*.jpeg
+
+# Temporary uploads
+temp_uploads/
+uploads/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Development files
+test_*.py
+*_test.py
+*_old.py
+*_backup.py
+*_temp.py
+
+# Documentation drafts
+*_SUMMARY.md
+*_STRATEGY.md
+*_IMPLEMENTATION.md
+
+# Node modules (for api-gateway)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
