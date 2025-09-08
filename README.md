@@ -1,6 +1,25 @@
-# 🎨 AI Image Generation System with API Key Validation
+# 🎨 AI Image Generation System with Role-Based Access Control
 
-A complete microservices-based AI image generation platform featuring secure API key authentication, real-time validation, and ComfyUI integration.
+A complete microservices-based AI image generation platform featuring role-based authentication, team collaboration tools, and ComfyUI integration.
+
+## 🚀 **Quick Start for New Team Members**
+
+### For New Team Members:
+1. **Clone the repository**
+2. **Follow the setup guide**: [api-key-manager/SETUP.md](api-key-manager/SETUP.md)
+3. **Get super admin key** from your team lead
+4. **Create your personal admin account** after initial setup
+
+### TL;DR Setup:
+```bash
+git clone https://github.com/FLRS-CV/ai-image-generation-system.git
+cd ai-image-generation-system/api-key-manager
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with super admin key, then:
+python run_server.py
+```
+🌐 **Access**: `http://localhost:8004`
 
 ## 🏗️ **System Architecture**
 
@@ -23,6 +42,18 @@ A complete microservices-based AI image generation platform featuring secure API
 ```
 
 ## 🚀 **Features**
+
+### **🔐 Role-Based Access Control**
+- ✅ **Super Admin**: Create admins/users, manage all keys, virtual staging
+- ✅ **Admin**: Create users only, virtual staging access  
+- ✅ **User**: Virtual staging access only
+- ✅ **Environment-Based Security**: Super admin key via secure .env configuration
+
+### **👥 Team Collaboration**
+- ✅ **Shared Super Admin Key**: Secure team access for onboarding
+- ✅ **Personal Admin Accounts**: Individual admin accounts for daily use
+- ✅ **Automated Setup Validation**: Script to verify correct configuration
+- ✅ **Comprehensive Documentation**: Step-by-step guides for new team members
 
 ### **Security & Authentication**
 - ✅ **API Key Management**: Generate, validate, and manage API keys
@@ -66,6 +97,28 @@ A complete microservices-based AI image generation platform featuring secure API
 - **Storage**: 10GB+ free space for models and generated images
 
 ## 🚀 **Installation & Setup**
+
+## 🛠️ **Team Setup Instructions**
+
+### **For Team Leads: Setting Up New Members**
+1. **Share Repository Access**: Add team member to GitHub repository
+2. **Share Super Admin Key**: Use secure channel (Signal, encrypted email, etc.)
+3. **Provide Setup Guide**: Direct them to [api-key-manager/SETUP.md](api-key-manager/SETUP.md)
+
+### **For New Team Members: Getting Started**
+1. **Follow Setup Guide**: Complete instructions in [api-key-manager/SETUP.md](api-key-manager/SETUP.md)
+2. **Validate Setup**: Run `python validate_setup.py` to check configuration
+3. **Create Personal Account**: Use super admin access to create your personal admin account
+4. **Test Virtual Staging**: Verify everything works with a test image
+
+### **📚 Documentation & Resources**
+- **[SETUP.md](api-key-manager/SETUP.md)** - Detailed setup instructions
+- **[ONBOARDING.md](api-key-manager/ONBOARDING.md)** - Team member onboarding guide  
+- **[QUICK_REFERENCE.md](api-key-manager/QUICK_REFERENCE.md)** - Essential commands and URLs
+
+---
+
+## 💻 **Development Setup (Full System)**
 
 ### **Step 1: Clone Repository**
 ```bash
@@ -268,13 +321,22 @@ npm install
 
 ```
 ai-image-generation-system/
-├── api-key-manager/              # Authentication Service
-│   ├── app/
+├── api-key-manager/              # 🔐 Authentication & Team Management
+│   ├── app/                     # Core application
 │   │   ├── api/api_keys.py      # API endpoints
 │   │   ├── database/models.py    # Database models
 │   │   ├── services/            # Business logic
-│   │   └── models/              # Data models
-│   ├── requirements.txt         # Python dependencies
+│   │   ├── models/              # Data models
+│   │   └── static/main.js       # Frontend interface
+│   ├── .env.example            # ✨ Environment template
+│   ├── SETUP.md                # ✨ Setup instructions  
+│   ├── ONBOARDING.md           # ✨ Team onboarding guide
+│   ├── QUICK_REFERENCE.md      # ✨ Quick commands reference
+│   ├── validate_setup.py       # ✨ Setup validation script
+│   ├── quick_db_view.py        # 🛠️ Database viewer tool
+│   ├── read_database.py        # 🛠️ Database reader tool
+│   ├── sql_query_tool.py       # 🛠️ SQL query interface
+│   ├── requirements.txt        # Python dependencies
 │   └── run_server.py           # Server startup
 │
 ├── Deco_Core_POC/               # Main Application
@@ -290,6 +352,8 @@ ai-image-generation-system/
 │
 └── README.md                   # This file
 ```
+
+**Legend**: ✨ New team collaboration features | 🛠️ Development tools
 
 ## 🔒 **Security Features**
 
