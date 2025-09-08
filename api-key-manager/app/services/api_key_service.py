@@ -264,11 +264,13 @@ class APIKeyService:
         # 0:id, 1:key_hash, 2:key_prefix, 3:name, 4:status, 5:user_email, 6:organization,
         # 7:created_at, 8:last_used, 9:revoked_at, 10:rate_limit, 11:daily_quota, 
         # 12:current_daily_usage, 13:last_quota_reset, 14:role
+        status = row[4]
+        current_usage = row[12]
         return APIKeyResponse(
             id=row[0],
             key_prefix=row[2],
             name=row[3],
-            status=row[4],
+            status=status,
             user_email=row[5],
             organization=row[6],
             role=row[14] if len(row) > 14 and row[14] else "user",  # role is at index 14
@@ -277,8 +279,10 @@ class APIKeyService:
             revoked_at=row[9],
             rate_limit=row[10],
             daily_quota=row[11],
-            current_daily_usage=row[12],
-            last_quota_reset=row[13]
+            current_daily_usage=current_usage,
+            last_quota_reset=row[13],
+            is_active=(status == "active"),  # Explicitly set is_active for frontend
+            usage_count=current_usage  # Frontend compatibility field
         )
 
     def validate_super_admin_key(self, api_key: str) -> bool:
@@ -305,7 +309,9 @@ class APIKeyService:
                 rate_limit=9999,
                 daily_quota=9999,
                 current_daily_usage=0,
-                last_quota_reset=date.today().isoformat()
+                last_quota_reset=date.today().isoformat(),
+                is_active=True,  # Explicitly set for super admin
+                usage_count=0  # Frontend compatibility field
             )
             return True, super_admin_response, "Super admin key valid", UserRole.SUPERADMIN
 

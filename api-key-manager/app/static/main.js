@@ -44,6 +44,15 @@ function showAdminTab(tabName) {
     
     if (selectedTab) selectedTab.classList.add('active');
     if (selectedButton) selectedButton.classList.add('active');
+    
+    // Start auto-refresh when manage tab is selected
+    if (tabName === 'manage' && currentUserRole === 'superadmin') {
+        startAutoRefresh();
+        // Also load keys immediately
+        loadKeys();
+    } else {
+        stopAutoRefresh();
+    }
 }
 
 // API Key Validation
@@ -139,6 +148,9 @@ function hideMainContent() {
     userInfoSpan.classList.add('hidden');
     currentUserRole = null;
     currentApiKey = null;
+    
+    // Stop auto-refresh when user logs out
+    stopAutoRefresh();
 }
 
 function configureRoleBasedUI(role) {
@@ -431,7 +443,8 @@ function displayKeysList(keys) {
     `;
 
     keys.forEach(key => {
-        const isActive = key.is_active === undefined ? true : key.is_active;
+        // Check both is_active field and status field for maximum compatibility
+        const isActive = (key.is_active !== undefined) ? key.is_active : (key.status === 'active');
         const statusBadge = isActive ? 
             '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px;">ACTIVE</span>' :
             '<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px;">REVOKED</span>';
@@ -443,7 +456,7 @@ function displayKeysList(keys) {
                 <td style="border: 1px solid #ddd; padding: 8px;">
                     <span class="role-badge ${key.role || 'user'}">${(key.role || 'user').toUpperCase()}</span>
                 </td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${key.usage_count || 0}/${key.daily_quota || '∞'}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${(key.usage_count !== undefined ? key.usage_count : key.current_daily_usage) || 0}/${key.daily_quota || '∞'}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${statusBadge}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">${new Date(key.created_at).toLocaleDateString()}</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">
@@ -496,6 +509,31 @@ async function revokeKey(keyId) {
 
 function refreshKeys() {
     loadKeys();
+}
+
+// Auto-refresh keys every 30 seconds if manage tab is active
+let autoRefreshInterval = null;
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    autoRefreshInterval = setInterval(() => {
+        // Only refresh if user is on manage tab and is super admin
+        const manageTab = document.getElementById('admin-manage');
+        if (manageTab && manageTab.classList.contains('active') && currentUserRole === 'superadmin') {
+            console.log('Auto-refreshing API keys data...');
+            loadKeys();
+        }
+    }, 30000); // Refresh every 30 seconds
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
 }
 
 // Utility Functions

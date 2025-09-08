@@ -54,6 +54,11 @@ build/
 *.sqlite
 *.sqlite3
 api_keys.db
+api_keys.db.backup
+
+# Environment files (sensitive)
+.env
+.env.backup
 
 # Generated files
 temp_uploads/

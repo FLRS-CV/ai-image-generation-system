@@ -4,13 +4,38 @@
 
 A complete FastAPI-based system that combines secure API key management with AI-powered virtual staging capabilities. Upload an empty room image and get professionally furnished variations using ComfyUI and advanced AI models.
 
+## 🚀 **Quick Start**
+
+### For New Team Members:
+1. **Clone the repository**
+2. **Follow the detailed setup guide**: See [SETUP.md](SETUP.md) for complete instructions
+3. **Get super admin key** from your team lead via secure channel
+4. **Create your personal admin account** after initial setup
+
+### TL;DR Setup:
+```bash
+git clone https://github.com/FLRS-CV/ai-image-generation-system.git
+cd ai-image-generation-system/api-key-manager
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with super admin key, then:
+python run_server.py
+```
+🌐 **Access**: `http://localhost:8004`
+
 ## ✨ Features
+
+### 🔐 **Role-Based Access Control**
+- **Super Admin**: Create admins/users, manage all keys, virtual staging
+- **Admin**: Create users only, virtual staging access  
+- **User**: Virtual staging access only
+- **Environment-Based Security**: Super admin key via secure .env configuration
 
 ### 🔐 **Two-Layer API Key Security**
 - **Frontend Validation**: Real-time API key checking with visual feedback
 - **Middleware Protection**: Server-side enforcement before AI processing
 - **Usage Tracking**: Automatic increment of API usage counters
-- **Admin Panel**: Secure management interface with HTTP Basic Auth
+- **Admin Panel**: Secure management interface with role-based permissions
 
 ### 🎨 **AI Virtual Staging**
 - **ComfyUI Integration**: Advanced AI workflows for room transformation

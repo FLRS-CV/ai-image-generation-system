@@ -37,6 +37,17 @@ class APIKeyResponse(BaseModel):
     daily_quota: int
     current_daily_usage: int
     last_quota_reset: str
+    is_active: Optional[bool] = None
+    usage_count: Optional[int] = None  # Frontend compatibility field
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set is_active based on status for frontend compatibility
+        if self.is_active is None:
+            self.is_active = self.status == "active"
+        # Set usage_count based on current_daily_usage for frontend compatibility
+        if self.usage_count is None:
+            self.usage_count = self.current_daily_usage
 
 class APIKeyListResponse(BaseModel):
     api_keys: List[APIKeyResponse]
