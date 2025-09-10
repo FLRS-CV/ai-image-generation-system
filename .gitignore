@@ -1,3 +1,7 @@
+# ==========================================
+# AI Image Generation System - .gitignore
+# ==========================================
+
 # Python
 __pycache__/
 *.py[cod]
@@ -10,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-
 lib64/
 parts/
 sdist/
@@ -23,12 +26,13 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environments
 venv/
 env/
 ENV/
 ai_demo/
 .venv/
+venv-virtual-staging/
 
 # Node.js
 node_modules/
@@ -42,14 +46,18 @@ yarn-error.log*
 out/
 build/
 
-# Environment files
+# Environment Variables (Sensitive)
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.backup
 
-# Database
+# Database Files
 *.db
 *.sqlite
 *.sqlite3
@@ -62,6 +70,7 @@ api_keys.db.backup
 
 # Generated files
 temp_uploads/
+uploads/
 generated/
 outputs/
 
@@ -90,7 +99,7 @@ api-key-manager/venv-virtual-staging/
 *.swo
 *~
 
-# OS
+# OS Files
 .DS_Store
 .DS_Store?
 ._*
@@ -99,10 +108,39 @@ api-key-manager/venv-virtual-staging/
 ehthumbs.db
 Thumbs.db
 
+# Logs
+*.log
+logs/
+
+# Development & Testing Files
+test_*.py
+*_test.py
+*_old.py
+*_backup.py
+*_temp.py
+debug_*.py
+
+# Development Documentation (Internal Use)
+*_SUMMARY.md
+*_STRATEGY.md
+*_IMPLEMENTATION.md
+COMMIT_STRATEGY.md
+INTEGRATION_TESTING.md
+CLEANUP_SUMMARY.md
+
+# Deployment Files (Platform Specific)
+Procfile
+railway.json
+RAILWAY_DEPLOYMENT_CHECKLIST.md
+
+# ComfyUI (if included in project)
+ComfyUI/
+custom_nodes/
+
 # API Gateway (excluding for now)
 api-gateway/
 
-# Legacy/Experimental Directories (keeping locally for reference)
+# Legacy/Experimental Directories
 Deco_Core_POC/
 virtual-staging-api/
 
