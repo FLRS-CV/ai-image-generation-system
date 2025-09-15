@@ -260,12 +260,18 @@ class APIKeyService:
     
     def _row_to_api_key_response(self, row: tuple) -> APIKeyResponse:
         """Convert database row to APIKeyResponse object"""
-        # Database schema:
+        # Database schema (corrected based on actual database):
         # 0:id, 1:key_hash, 2:key_prefix, 3:name, 4:status, 5:user_email, 6:organization,
-        # 7:created_at, 8:last_used, 9:revoked_at, 10:rate_limit, 11:daily_quota, 
-        # 12:current_daily_usage, 13:last_quota_reset, 14:role
+        # 7:role, 8:created_at, 9:last_used, 10:revoked_at, 11:rate_limit, 12:daily_quota, 
+        # 13:current_daily_usage, 14:last_quota_reset
         status = row[4]
-        current_usage = row[12]
+        current_usage = row[13]
+        
+        # Handle None values with defaults
+        rate_limit = row[11] if row[11] is not None else 60
+        daily_quota = row[12] if row[12] is not None else 100
+        last_quota_reset = row[14] if row[14] is not None else "2025-01-01"
+        
         return APIKeyResponse(
             id=row[0],
             key_prefix=row[2],
@@ -273,14 +279,14 @@ class APIKeyService:
             status=status,
             user_email=row[5],
             organization=row[6],
-            role=row[14] if len(row) > 14 and row[14] else "user",  # role is at index 14
-            created_at=row[7],
-            last_used=row[8],
-            revoked_at=row[9],
-            rate_limit=row[10],
-            daily_quota=row[11],
+            role=row[7] if row[7] is not None else "user",  # role is at index 7
+            created_at=row[8],
+            last_used=row[9],
+            revoked_at=row[10],
+            rate_limit=rate_limit,
+            daily_quota=daily_quota,
             current_daily_usage=current_usage,
-            last_quota_reset=row[13],
+            last_quota_reset=last_quota_reset,
             is_active=(status == "active"),  # Explicitly set is_active for frontend
             usage_count=current_usage  # Frontend compatibility field
         )

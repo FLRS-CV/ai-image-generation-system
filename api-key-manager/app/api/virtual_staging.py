@@ -48,6 +48,9 @@ async def generate_virtual_staging_alt(
     - **style**: Furnishing style (currently supports: scandinavian)
     - **X-API-Key**: Required API key in header for authentication
     """
+    print(f"DEBUG: Received generate request - file: {file.filename}, num_images: {num_images}, style: {style}")
+    print(f"DEBUG: API key info: {api_key_info}")
+    return await _generate_staging_internal(file, num_images, style, api_key_info)
     return await _generate_staging_internal(file, num_images, style, api_key_info)
 
 async def _generate_staging_internal(
@@ -94,6 +97,8 @@ async def _generate_staging_internal(
             style=style
         )
         
+        print(f"DEBUG: ComfyUI result: {result}")
+        
         # Clean up temp file
         try:
             os.remove(temp_path)
@@ -109,18 +114,25 @@ async def _generate_staging_internal(
                     # Convert absolute path to relative path for web serving
                     abs_path = img_result["file_path"]
                     rel_path = os.path.relpath(abs_path, start=os.getcwd())
-                    images.append(rel_path.replace("\\", "/"))  # Use forward slashes for web
+                    web_path = "/generated/" + os.path.basename(rel_path)  # Create web-accessible path
+                    images.append({
+                        "output_image_url": web_path,
+                        "seed": img_result.get("seed", "unknown")
+                    })
             
-            return {
+            response_data = {
                 "success": True,
                 "message": f"Successfully generated {len(images)} virtual staging images",
-                "images": images,
+                "results": images,  # Frontend expects 'results' field
                 "metadata": {
                     "style": style,
                     "num_images": len(images),
                     "original_filename": image_file.filename
                 }
             }
+            
+            print(f"DEBUG: Returning response: {response_data}")
+            return response_data
         else:
             raise HTTPException(status_code=500, detail=result["message"])
             

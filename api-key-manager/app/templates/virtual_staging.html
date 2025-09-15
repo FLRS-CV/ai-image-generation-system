@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Staging - FLRS</title>
+  <link rel="icon" type="image/x-icon" href="/app/static/favicon.ico">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js"></script>
+  <style>
+    .loader {
+      width: 48px;
+      height: 48px;
+      margin: auto;
+      position: relative;
+    }
+
+    .loader:before {
+      content: '';
+      width: 48px;
+      height: 5px;
+      background: #b994e3;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      border-radius: 50%;
+      animation: shadow324 0.5s linear infinite;
+    }
+
+    .loader:after {
+      content: '';
+      width: 100%;
+      height: 100%;
+      background: #7008e7;
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-radius: 4px;
+      animation: jump7456 0.5s linear infinite;
+    }
+
+    @keyframes jump7456 {
+      15% {
+        border-bottom-right-radius: 3px;
+      }
+
+      25% {
+        transform: translateY(9px) rotate(22.5deg);
+      }
+
+      50% {
+        transform: translateY(18px) scale(1, .9) rotate(45deg);
+        border-bottom-right-radius: 40px;
+      }
+
+      75% {
+        transform: translateY(9px) rotate(67.5deg);
+      }
+
+      100% {
+        transform: translateY(0) rotate(90deg);
+      }
+    }
+
+    @keyframes shadow324 {
+
+      0%,
+      100% {
+        transform: scale(1, 1);
+      }
+
+      50% {
+        transform: scale(1.2, 1);
+      }
+    }
+
+    /* Additional animations for smooth transitions */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .slide-up {
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Hover effects for cards */
+    .card-hover {
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Smooth modal transitions */
+    .modal-backdrop {
+      backdrop-filter: blur(5px);
+      transition: backdrop-filter 0.3s ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-[#F5F5F5]" x-data="virtualStagingApp()">
+  <!-- Top Navigation Bar -->
+  <div id="topbar" class="bg-white h-[50px] px-4 lg:px-20 flex items-center justify-between">
+    <img src="/app/static/images/flrspec.png" alt="FLRS Logo" class="w-[43%] sm:w-[25%] lg:w-[18%] xl:w-[14%]" />
+    <div class="text-white p-4 flex items-center gap-2">
+      <!-- <a href="/admin" class="text-[#7008e7] font-semibold border border-[#dedede] px-4 py-1 rounded-lg mr-2" x-show="userRole === 'admin' || userRole === 'superadmin'">
+        Admin Panel
+      </a> -->
+      <button @click="showApiKeyModal = true" id="apiKeyLink"
+        class="text-[#7008e7] font-semibold border border-[#dedede] px-4 py-1 rounded-lg relative">
+        <div class="absolute -right-1 -top-1">
+          <span class="relative flex size-3">
+            <span x-show="!apiKeyValid" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+            <span x-show="!apiKeyValid" class="relative inline-flex size-3 rounded-full bg-red-500" title="Missing/Invalid Key"></span>
+            <span x-show="apiKeyValid" class="relative inline-flex size-3 rounded-full bg-green-500" title="Valid Key"></span>
+          </span>
+        </div>
+        API Key
+      </button>
+    </div>
+  </div>
+
+  <!-- API Key Modal -->
+  <div x-show="showApiKeyModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-20" x-cloak>
+    <div class="my-4 bg-white rounded-lg px-8 w-full md:w-1/2 mx-auto relative">
+      <!-- Close button -->
+      <button @click="showApiKeyModal = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-[#7008e7]">
+          <path d="M183.1 137.4C170.6 124.9 150.3 124.9 137.8 137.4C125.3 149.9 125.3 170.2 137.8 182.7L275.2 320L137.9 457.4C125.4 469.9 125.4 490.2 137.9 502.7C150.4 515.2 170.7 515.2 183.2 502.7L320.5 365.3L457.9 502.6C470.4 515.1 490.7 515.1 503.2 502.6C515.7 490.1 515.7 469.8 503.2 457.3L365.8 320L503.1 182.6C515.6 170.1 515.6 149.8 503.1 137.3C490.6 124.8 470.3 124.8 457.8 137.3L320.5 274.7L183.1 137.4z" />
+        </svg>
+      </button>
+      <div class="my-4 bg-white rounded-lg py-8 px-8 md:px-14 w-full mx-auto">
+        <div class="flex flex-col gap-2">
+          <div class="flex gap-2 items-center text-xl justify-center pb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-[#7008e7]">
+              <path d="M272 240C272 169.3 329.3 112 400 112C470.7 112 528 169.3 528 240C528 310.7 470.7 368 400 368C389.6 368 379.5 366.8 369.9 364.4C361.8 362.4 353.2 364.9 347.3 370.8L318.1 400L264 400C250.7 400 240 410.7 240 424L240 464L200 464C186.7 464 176 474.7 176 488L176 528L112 528L112 449.9L269.2 292.7C275.1 286.8 277.5 278.2 275.6 270.1C273.3 260.5 272 250.4 272 240zM400 64C302.8 64 224 142.8 224 240C224 249.5 224.7 258.8 226.2 267.9L71 423C66.5 427.5 64 433.6 64 440L64 552C64 565.3 74.7 576 88 576L200 576C213.3 576 224 565.3 224 552L224 512L264 512C277.3 512 288 501.3 288 488L288 448L328 448C334.4 448 340.5 445.5 345 441L372.2 413.8C381.3 415.2 390.6 416 400.1 416C497.3 416 576.1 337.2 576.1 240C576.1 142.8 497.2 64 400 64zM432 240C449.7 240 464 225.7 464 208C464 190.3 449.7 176 432 176C414.3 176 400 190.3 400 208C400 225.7 414.3 240 432 240z" />
+            </svg>
+            <label class="flex gap-4 font-semibold">API Key Authentication</label>
+          </div>
+          <label class="text-gray-400">Enter API key to access the virtual staging feature</label>
+          <div class="flex gap-2">
+            <input x-model="apiKey" type="text" class="border border-[#dedede] rounded-lg w-full h-[36px] px-3" placeholder="sk-proj-..." />
+            <button @click="validateApiKey()" class="cursor-pointer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-6 h-6 fill-[#7008e7]">
+                <path d="M201.9 344L126.9 512.6L493.2 344L201.9 344zM493.2 296L126.9 127.4L201.9 296L493.2 296zM66.8 529.6L160 320L66.8 110.4C65 106.2 64 101.6 64 97C64 78.8 78.7 64 96.8 64C101.5 64 106.2 65 110.5 67L586.2 286C599.5 292.1 608 305.4 608 320C608 334.6 599.5 347.9 586.2 354L110.5 573C106.2 575 101.5 576 96.8 576C78.7 576 64 561.2 64 543C64 538.4 65 533.8 66.8 529.6z" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Validation Messages -->
+          <div x-show="validationMessage.type === 'success'" class="bg-green-100 rounded-lg mt-2 w-full text-green-700 flex gap-2 items-center py-2 px-6" x-cloak>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-green-700">
+              <path d="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM320 112C205.1 112 112 205.1 112 320C112 434.9 205.1 528 320 528C434.9 528 528 434.9 528 320C528 205.1 434.9 112 320 112zM390.7 233.9C398.5 223.2 413.5 220.8 424.2 228.6C434.9 236.4 437.3 251.4 429.5 262.1L307.4 430.1C303.3 435.8 296.9 439.4 289.9 439.9C282.9 440.4 276 437.9 271.1 433L215.2 377.1C205.8 367.7 205.8 352.5 215.2 343.2C224.6 333.9 239.8 333.8 249.1 343.2L285.1 379.2L390.7 234z" />
+            </svg>
+            <span x-text="validationMessage.text"></span>
+          </div>
+          
+          <div x-show="validationMessage.type === 'error'" class="bg-red-100 rounded-lg mt-2 w-full text-red-700 flex gap-2 items-center py-2 px-6" x-cloak>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-red-700">
+              <path d="M320 112C434.9 112 528 205.1 528 320C528 434.9 434.9 528 320 528C205.1 528 112 434.9 112 320C112 205.1 205.1 112 320 112zM320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM231 231C221.6 240.4 221.6 255.6 231 264.9L286 319.9L231 374.9C221.6 384.3 221.6 399.5 231 408.8C240.4 418.1 255.6 418.2 264.9 408.8L319.9 353.8L374.9 408.8C384.3 418.2 399.5 418.2 408.8 408.8C418.1 399.4 418.2 384.2 408.8 374.9L353.8 319.9L408.8 264.9C418.2 255.5 418.2 240.3 408.8 231C399.4 221.7 384.2 221.6 374.9 231L319.9 286L264.9 231C255.5 221.6 240.3 221.6 231 231z" />
+            </svg>
+            <span x-text="validationMessage.text"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div x-show="apiKeyValid && !isGenerating" class="flex flex-col lg:flex-row gap-6 my-6 mx-10 w-full xl:w-[90%] 2xl:w-[80%] mx-auto" x-cloak>
+    <!-- Upload Form -->
+    <div class="w-full lg:w-1/2 bg-white py-8 px-12 rounded-lg">
+      <form @submit.prevent="generateVirtualStaging()" class="flex flex-col gap-5">
+        <div class="flex flex-col">
+          <h3 class="flex gap-2 items-center font-semibold text-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-[#7008e7]">
+              <path d="M519.9 113.3C520.8 112.5 522 112 523.2 112C525.9 112 528.1 114.2 528.1 116.9C528.1 118.1 527.7 119.3 526.8 120.2L161.3 523.6C158.8 526.4 155.2 528 151.4 528C147.9 528 144.5 526.6 142 524.1L115.9 498C113.4 495.5 112 492.1 112 488.6C112 484.8 113.6 481.3 116.4 478.7L519.9 113.3zM523.1 64C510 64 497.4 68.9 487.6 77.7L224.6 315.9C221.7 318.6 217.8 320 213.9 320L176 320C167.2 320 160 327.2 160 336L160 367.3C160 371.8 158.1 376.1 154.7 379.2L84.2 443.1C71.3 454.7 64 471.2 64 488.5C64 504.8 70.5 520.4 82 531.9L108.1 558C119.6 569.5 135.2 576 151.5 576C168.8 576 185.3 568.7 196.9 555.8L463.7 261.3C466.7 258 471 256 475.6 256L496 256C504.8 256 512 248.8 512 240L512 214.1C512 210.1 513.5 206.3 516.1 203.4L562.3 152.4C571.1 142.6 576 130 576 116.9C576 87.7 552.3 64 523.1 64zM496 352C492.4 352 489.3 354.4 488.3 357.8L473.5 409.5L421.8 424.3C418.4 425.3 416 428.4 416 432C416 435.6 418.4 438.7 421.8 439.7L473.5 454.5L488.3 506.2C489.3 509.6 492.4 512 496 512C499.6 512 502.7 509.6 503.7 506.2L518.5 454.5L570.2 439.7C573.6 438.7 576 435.6 576 432C576 428.4 573.6 425.3 570.2 424.3L518.5 409.5L503.7 357.8C502.7 354.4 499.6 352 496 352zM151.7 133.8C150.7 130.4 147.6 128 144 128C140.4 128 137.3 130.4 136.3 133.8L121.5 185.5L69.8 200.3C66.4 201.3 64 204.4 64 208C64 211.6 66.4 214.7 69.8 215.7L121.5 230.5L136.3 282.2C137.3 285.6 140.4 288 144 288C147.6 288 150.7 285.6 151.7 282.2L166.5 230.5L218.2 215.7C221.6 214.7 224 211.6 224 208C224 204.4 221.6 201.3 218.2 200.3L166.5 185.5L151.7 133.8zM272 64C268.3 64 265.1 66.5 264.2 70.1L257.4 97.4L230.1 104.2C226.5 105.1 224 108.3 224 112C224 115.7 226.5 118.9 230.1 119.8L257.4 126.6L264.2 153.9C265.1 157.5 268.3 160 272 160C275.7 160 278.9 157.5 279.8 153.9L286.6 126.6L313.9 119.8C317.5 118.9 320 115.7 320 112C320 108.3 317.5 105.1 313.9 104.2L286.6 97.4L279.8 70.1C278.9 66.5 275.7 64 272 64z" />
+            </svg>
+            <span class="flex gap-4 font-semibold">Generate Virtual Staging</span>
+          </h3>
+          <label class="text-gray-500">Upload an image of an empty room and transform it into beautifully furnished space</label>
+        </div>
+        
+        <div class="flex flex-col gap-2">
+          <label class="text-gray-400">Upload File <span class="text-red-400">*</span></label>
+          <div class="flex items-center space-x-6">
+            <label class="block w-full border border-[#dedede] rounded-lg cursor-pointer">
+              <span class="sr-only">Choose Photo</span>
+              <input @change="handleFileUpload($event)" type="file" accept="image/*" 
+                class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
+            </label>
+          </div>
+          <div x-show="!selectedFile" class="text-red-600 text-sm">Mandatory to select photo</div>
+        </div>
+        
+        <div class="flex flex-row gap-3 w-full">
+          <div class="flex flex-col gap-2 w-[65%]">
+            <label class="text-gray-400">Choose Furnishing Style You Prefer</label>
+            <div class="flex gap-6 items-center">
+              <div class="flex gap-3">
+                <input x-model="selectedStyle" type="radio" id="scandinavian" name="style" value="scandinavian" class="cursor-pointer" />
+                <label for="scandinavian" class="cursor-pointer">Scandinavian</label>
+              </div>
+              <div class="flex gap-3">
+                <input x-model="selectedStyle" type="radio" id="modern" name="style" value="modern" class="cursor-pointer" />
+                <label for="modern" class="cursor-pointer">Modern</label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex flex-col gap-2 w-[35%]">
+            <label class="text-gray-400">Number of Variations</label>
+            <select x-model="numVariations" class="h-[36px] border border-[#dedede] rounded-lg px-3">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-start">
+          <button type="submit" :disabled="!selectedFile || isGenerating"
+            class="bg-violet-700 hover:bg-violet-600 disabled:bg-gray-400 text-white text-center px-10 py-2 rounded-lg font-semibold cursor-pointer">
+            <span x-show="!isGenerating">Generate</span>
+            <span x-show="isGenerating">Generating...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Preview Image -->
+    <div class="w-full lg:w-1/2 bg-white p-6 rounded-lg">
+      <div class="shrink-0">
+        <img x-bind:src="previewImage" class="h-auto w-full object-cover rounded-lg" alt="Preview Image" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State - Centered and Prominent -->
+  <div x-show="isGenerating" class="fixed inset-0 bg-black/30 flex items-center justify-center z-40" x-cloak>
+    <div class="bg-white rounded-lg p-8 w-full max-w-md mx-4 shadow-2xl">
+      <div class="loader mx-auto"></div>
+      <div class="text-center leading-normal mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Generating Virtual Staging</h3>
+        <p class="text-gray-600">This may take a few minutes...</p>
+        <p class="text-sm text-gray-500 mt-2">Please don't close this window</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Message -->
+  <div x-show="generationComplete" class="w-full" x-cloak>
+    <div class="bg-green-100 rounded-lg mt-2 w-full lg:w-1/2 text-green-700 flex flex-col items-center py-2 px-6 mx-auto">
+      <div class="flex gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-green-700">
+          <path d="M423.5 117.2C419 118.9 416 123.2 416 128C416 132.8 419 137.1 423.5 138.8L480 160L501.2 216.5C502.9 221 507.2 224 512 224C516.8 224 521.1 221 522.8 216.5L544 160L600.5 138.8C605 137.1 608 132.8 608 128C608 123.2 605 118.9 600.5 117.2L544 96L522.8 39.5C521.1 35 516.8 32 512 32C507.2 32 502.9 35 501.2 39.5L480 96L423.5 117.2zM199.9 272.5L224 220.4L248.1 272.5C252.9 282.9 261.2 291.2 271.6 296L323.7 320.1L271.6 344.2C261.2 349 252.9 357.3 248.1 367.7L224 419.8L199.9 367.7C195.1 357.3 186.8 349 176.4 344.2L124.3 320L176.5 295.9C186.9 291.1 195.2 282.8 200 272.4zM197.6 163.1L156.4 252.4L67.1 293.6L66.5 293.9C62.6 295.7 54.2 299.6 41.3 305.5C35.6 308.1 32 313.8 32 320C32 326.2 35.6 331.9 41.3 334.5C54.2 340.4 62.5 344.3 66.5 346.1L67.1 346.4L156.4 387.6L197.6 476.9L197.9 477.5C199.7 481.4 203.6 489.8 209.5 502.7C212.1 508.4 217.8 512 224 512C230.2 512 235.9 508.4 238.5 502.7C252.9 471.6 253.6 470 291.6 387.7L380.9 346.5L381.5 346.2C385.4 344.4 393.8 340.5 406.7 334.6C412.4 332 416 326.3 416 320.1C416 313.9 412.4 308.2 406.7 305.6C375.6 291.2 374 290.5 291.7 252.5L250.5 163.2L250.2 162.6C248.4 158.7 244.5 150.3 238.6 137.4C236 131.7 230.3 128.1 224.1 128.1C217.9 128.1 212.2 131.7 209.6 137.4C195.8 167.2 198.1 162.4 197.7 163.2zM448 480L391.5 501.2C387 502.9 384 507.2 384 512C384 516.8 387 521.1 391.5 522.8L448 544L469.2 600.5C470.9 605 475.2 608 480 608C484.8 608 489.1 605 490.8 600.5L512 544L568.5 522.8C573 521.1 576 516.8 576 512C576 507.2 573 502.9 568.5 501.2L512 480L490.8 423.5C489.1 419 484.8 416 480 416C475.2 416 470.9 419 469.2 423.5L448 480z" />
+        </svg>
+        <span class="font-semibold">Virtual Staging Complete</span>
+      </div>
+      <span x-text="'Generated ' + results.length + ' variations in ' + selectedStyle + ' style'"></span>
+    </div>
+    <div class="flex justify-center">
+      <a href="#cardsContainer" class="cursor-pointer" title="View Generated Images">
+        <div class="rounded-full border border-[#dedede] flex items-center justify-center p-1 size-8 animate-bounce bg-white">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-6 h-6 fill-[#7008e7]">
+            <path d="M303.5 569C312.9 578.4 328.1 578.4 337.4 569L505.4 401C514.8 391.6 514.8 376.4 505.4 367.1C496 357.8 480.8 357.7 471.5 367.1L344.5 494.1L344.5 88C344.5 74.7 333.8 64 320.5 64C307.2 64 296.5 74.7 296.5 88L296.5 494.1L169.5 367.1C160.1 357.7 144.9 357.7 135.6 367.1C126.3 376.5 126.2 391.7 135.6 401L303.6 569z" />
+          </svg>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Results Cards -->
+  <div x-show="results.length > 0" id="cardsContainer" class="flex flex-wrap gap-4 w-full xl:w-[90%] 2xl:w-[80%] mx-auto my-6 justify-between slide-up" x-cloak>
+    <template x-for="(result, index) in results" :key="index">
+      <div class="w-full md:w-[30%] lg:w-[24%] xl:w-[23%] bg-white rounded-lg shadow-md overflow-hidden card-hover">
+        <!-- Card Header with Variation Number -->
+        <div class="bg-gray-50 px-4 py-3 border-b border-gray-100">
+          <h2 class="text-lg font-semibold text-gray-800" x-text="'Variation ' + (index + 1)"></h2>
+        </div>
+        
+        <!-- Generated Image -->
+        <img :src="result.output_image_url" 
+             class="w-full h-48 object-cover cursor-pointer transition-transform duration-200 hover:scale-105"
+             @click="openLightbox(index)" 
+             alt="Generated Image"
+             :title="'Click to view comparison with original image'">
+        
+        <!-- Card Content -->
+        <div class="p-4">
+          <p class="text-gray-500 mb-4" x-text="selectedStyle.charAt(0).toUpperCase() + selectedStyle.slice(1) + ', ' + result.seed + ' seed'"></p>
+          <div class="flex gap-2">
+            <a :href="result.output_image_url" :download="'virtual_staging_variation_' + (index + 1) + '.png'"
+               class="flex-1 inline-block px-4 py-2 rounded-lg bg-violet-700 hover:bg-violet-600 text-white text-center transition-colors duration-200">
+              Download
+            </a>
+            <button @click="openSingleImage(result.output_image_url)"
+                    class="px-4 py-2 rounded-lg border border-violet-700 text-violet-700 hover:bg-violet-50 transition-colors duration-200"
+                    title="View fullscreen">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-4 h-4 fill-current">
+                <path d="M128 32C92.7 32 64 60.7 64 96L64 224C64 237.3 74.7 248 88 248C101.3 248 112 237.3 112 224L112 96L240 96C253.3 96 264 85.3 264 72C264 58.7 253.3 48 240 48L128 48L128 32zM240 592L112 592L112 464C112 450.7 101.3 440 88 440C74.7 440 64 450.7 64 464L64 592C64 627.3 92.7 656 128 656L240 656C253.3 656 264 645.3 264 632C264 618.7 253.3 608 240 608L240 592zM512 32L400 32C386.7 32 376 42.7 376 56C376 69.3 386.7 80 400 80L528 80L528 208C528 221.3 538.7 232 552 232C565.3 232 576 221.3 576 208L576 80C576 44.7 547.3 16 512 16L512 32zM400 656L512 656C547.3 656 576 627.3 576 592L576 464C576 450.7 565.3 440 552 440C538.7 440 528 450.7 528 464L528 592L400 592C386.7 592 376 602.7 376 616C376 629.3 386.7 640 400 640L400 656z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Lightbox for Image Comparison -->
+  <div x-show="showLightbox" class="fixed inset-0 bg-black/70 modal-backdrop flex items-center justify-center z-50 fade-in" x-cloak>
+    <div class="relative bg-white p-8 md:p-14 rounded-lg flex flex-col md:flex-row gap-4 max-w-8xl w-full mx-4">
+      <!-- Close Button -->
+      <button @click="closeLightbox()" class="absolute top-4 right-4 text-black hover:text-red-600 text-xl font-bold cursor-pointer transition-colors duration-200 p-2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-5 h-5 fill-current">
+          <path d="M183.1 137.4C170.6 124.9 150.3 124.9 137.8 137.4C125.3 149.9 125.3 170.2 137.8 182.7L275.2 320L137.9 457.4C125.4 469.9 125.4 490.2 137.9 502.7C150.4 515.2 170.7 515.2 183.2 502.7L320.5 365.3L457.9 502.6C470.4 515.1 490.7 515.1 503.2 502.6C515.7 490.1 515.7 469.8 503.2 457.3L365.8 320L503.1 182.6C515.6 170.1 515.6 149.8 503.1 137.3C490.6 124.8 470.3 124.8 457.8 137.3L320.5 274.7L183.1 137.4z" />
+        </svg>
+      </button>
+
+      <!-- Navigation Buttons -->
+      <button x-show="results.length > 1" @click="prevImageSet()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-violet-300 z-10 cursor-pointer transition-colors duration-200 p-2 rounded-full bg-black/20 hover:bg-black/40">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-8 h-8 fill-current">
+          <path d="M112 320C112 205.1 205.1 112 320 112C434.9 112 528 205.1 528 320C528 434.9 434.9 528 320 528C205.1 528 112 434.9 112 320zM576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576C461.4 576 576 461.4 576 320zM335 199L231 303C221.6 312.4 221.6 327.6 231 336.9L335 441C344.4 450.4 359.6 450.4 368.9 441C378.2 431.6 378.3 416.4 368.9 407.1L281.9 320.1L368.9 233.1C378.3 223.7 378.3 208.5 368.9 199.2C359.5 189.9 344.3 189.8 335 199.2z" />
+        </svg>
+      </button>
+
+      <button x-show="results.length > 1" @click="nextImageSet()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-violet-300 z-10 cursor-pointer transition-colors duration-200 p-2 rounded-full bg-black/20 hover:bg-black/40">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-8 h-8 fill-current">
+          <path d="M528 320C528 434.9 434.9 528 320 528C205.1 528 112 434.9 112 320C112 205.1 205.1 112 320 112C434.9 112 528 205.1 528 320zM64 320C64 461.4 178.6 576 320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320zM305 441L409 337C418.4 327.6 418.4 312.4 409 303.1L305 199C295.6 189.6 280.4 189.6 271.1 199C261.8 208.4 261.7 223.6 271.1 232.9L358.1 319.9L271.1 406.9C261.7 416.3 261.7 431.5 271.1 440.8C280.5 450.1 295.7 450.2 305 440.8z" />
+        </svg>
+      </button>
+
+      <!-- Image Containers -->
+      <div class="flex-1 flex flex-col items-center">
+        <h3 class="mb-4 font-semibold text-gray-700 text-lg">Original</h3>
+        <div class="flex-1 flex justify-center items-center w-full">
+          <img :src="previewImage" 
+               @click="console.log('Clicked original image:', previewImage); openSingleImage(previewImage)"
+               class="max-w-full max-h-[70vh] object-contain rounded-lg border-2 border-gray-200 cursor-pointer hover:border-violet-300 transition-colors duration-200 shadow-lg" 
+               alt="Original Image"
+               title="Click to view fullscreen">
+        </div>
+      </div>
+
+      <div class="flex-1 flex flex-col items-center">
+        <h3 class="mb-4 font-semibold text-gray-700 text-lg">Generated</h3>
+        <div class="flex-1 flex justify-center items-center w-full">
+          <img :src="results[currentLightboxIndex]?.output_image_url" 
+               @click="console.log('Clicked generated image:', results[currentLightboxIndex]?.output_image_url); openSingleImage(results[currentLightboxIndex]?.output_image_url)"
+               class="max-w-full max-h-[70vh] object-contain rounded-lg border-2 border-gray-200 cursor-pointer hover:border-violet-300 transition-colors duration-200 shadow-lg" 
+               alt="Generated Image"
+               title="Click to view fullscreen">
+        </div>
+      </div>
+
+      <!-- Image counter for multiple results -->
+      <div x-show="results.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+        <span x-text="(currentLightboxIndex + 1) + ' of ' + results.length"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Single Image Fullscreen Modal -->
+  <div x-show="showSingleImageModal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 fade-in" x-cloak>
+    <button @click="closeSingleImage()" class="absolute top-6 right-6 text-white text-3xl font-bold hover:text-red-400 transition-colors duration-200 p-2 z-10">
+      ✕
+    </button>
+    <img id="singleImageModal" x-bind:src="singleImageSrc" 
+         class="rounded-lg shadow-lg" 
+         alt="Fullscreen Image"
+         style="width: 85vw; height: 85vh; object-fit: contain;">
+    <!-- Download button for fullscreen view -->
+    <a x-bind:href="singleImageSrc" download class="absolute bottom-6 right-6 bg-violet-700 hover:bg-violet-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 z-10">
+      Download
+    </a>
+  </div>
+
+  <!-- Back to Top Button -->
+  <div class="fixed right-2 bottom-2">
+    <a href="#topbar" class="cursor-pointer" title="Jump To The Top">
+      <div class="rounded-full border border-[#dedede] flex items-center justify-center p-1 size-8 animate-pulse bg-white">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-6 h-6 fill-[#7008e7]">
+          <path d="M337.5 79C328.1 69.6 312.9 69.6 303.6 79L135.5 247C126.1 256.4 126.1 271.6 135.5 280.9C144.9 290.2 160.1 290.3 169.4 280.9L296.4 153.9L296.4 560C296.4 573.3 307.1 584 320.4 584C333.7 584 344.4 573.3 344.4 560L344.4 153.9L471.4 280.9C480.8 290.3 496 290.3 505.3 280.9C514.6 271.5 514.7 256.3 505.3 247L337.5 79z" />
+        </svg>
+      </div>
+    </a>
+  </div>
+
+  <script>
+    function virtualStagingApp() {
+      return {
+        // Authentication state
+        apiKey: '',
+        apiKeyValid: false,
+        userRole: '',
+        showApiKeyModal: !localStorage.getItem('virtualStagingApiKey'), // Show modal if no saved key
+        validationMessage: { type: '', text: '' },
+
+        // Form state
+        selectedFile: null,
+        previewImage: '/app/static/images/empty-room.jpg',
+        selectedStyle: 'scandinavian',
+        numVariations: 4,
+
+        // Generation state
+        isGenerating: false,
+        generationComplete: false,
+        results: [],
+
+        // Lightbox state
+        showLightbox: false,
+        currentLightboxIndex: 0,
+        showSingleImageModal: false,
+        singleImageSrc: '',
+
+        init() {
+          // Check for saved API key on page load
+          const savedApiKey = localStorage.getItem('virtualStagingApiKey');
+          if (savedApiKey) {
+            this.apiKey = savedApiKey;
+            this.validateApiKey();
+          }
+
+          // Add keyboard event listeners
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              if (this.showSingleImageModal) {
+                this.closeSingleImage();
+              } else if (this.showLightbox) {
+                this.closeLightbox();
+              }
+            } else if (this.showLightbox) {
+              if (e.key === 'ArrowLeft') {
+                this.prevImageSet();
+              } else if (e.key === 'ArrowRight') {
+                this.nextImageSet();
+              }
+            }
+          });
+        },
+
+        async validateApiKey() {
+          if (!this.apiKey.trim()) {
+            this.validationMessage = { type: 'error', text: 'Please enter an API key' };
+            return;
+          }
+
+          try {
+            const response = await fetch('/api/validate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ api_key: this.apiKey })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.valid) {
+              this.apiKeyValid = true;
+              this.userRole = data.role;
+              this.validationMessage = { type: 'success', text: `Valid ${data.role} key` };
+              
+              // Save valid API key to localStorage
+              localStorage.setItem('virtualStagingApiKey', this.apiKey);
+              
+              // Close modal after 1 second
+              setTimeout(() => {
+                this.showApiKeyModal = false;
+              }, 1000);
+            } else {
+              this.apiKeyValid = false;
+              this.validationMessage = { type: 'error', text: data.message || 'Invalid API key' };
+              localStorage.removeItem('virtualStagingApiKey');
+            }
+          } catch (error) {
+            this.validationMessage = { type: 'error', text: 'Error validating API key' };
+            this.apiKeyValid = false;
+          }
+        },
+
+        handleFileUpload(event) {
+          const file = event.target.files[0];
+          if (file && file.type.startsWith('image/')) {
+            this.selectedFile = file;
+            
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.previewImage = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+
+        async generateVirtualStaging() {
+          if (!this.selectedFile || !this.apiKeyValid) {
+            return;
+          }
+
+          this.isGenerating = true;
+          this.generationComplete = false;
+          this.results = [];
+
+          try {
+            const formData = new FormData();
+            formData.append('file', this.selectedFile);  // Use 'file' not 'image'
+            formData.append('style', this.selectedStyle);
+            formData.append('num_images', this.numVariations);  // Use 'num_images' not 'num_variations'
+
+            console.log('Sending virtual staging request:', {
+              file: this.selectedFile.name,
+              style: this.selectedStyle,
+              num_images: this.numVariations,
+              apiKey: this.apiKey.substring(0, 20) + '...'
+            });
+
+            const response = await fetch('/api/virtual-staging/generate', {
+              method: 'POST',
+              headers: {
+                'X-API-Key': this.apiKey  // Use X-API-Key header instead of Authorization
+              },
+              body: formData
+            });
+
+            const data = await response.json();
+            console.log('Virtual staging response:', data);
+
+            if (response.ok) {
+              this.results = data.results || [];
+              this.generationComplete = true;
+              // Auto-scroll to results after 1 second delay
+              this.scheduleAutoScroll();
+            } else {
+              alert(data.message || 'Error generating virtual staging');
+            }
+          } catch (error) {
+            console.error('Virtual staging error:', error);
+            alert('Error generating virtual staging: ' + error.message);
+          } finally {
+            this.isGenerating = false;
+          }
+        },
+
+        openLightbox(index) {
+          this.currentLightboxIndex = index;
+          this.showLightbox = true;
+          // Prevent body scrolling when modal is open
+          document.body.style.overflow = 'hidden';
+        },
+
+        closeLightbox() {
+          this.showLightbox = false;
+          // Restore body scrolling
+          document.body.style.overflow = 'auto';
+        },
+
+        nextImageSet() {
+          this.currentLightboxIndex = (this.currentLightboxIndex + 1) % this.results.length;
+        },
+
+        prevImageSet() {
+          this.currentLightboxIndex = (this.currentLightboxIndex - 1 + this.results.length) % this.results.length;
+        },
+
+        openSingleImage(src) {
+          if (src) {
+            console.log('Opening single image:', src);
+            this.singleImageSrc = src;
+            this.showSingleImageModal = true;
+            // Prevent body scrolling when modal is open
+            document.body.style.overflow = 'hidden';
+            
+            // Debug: Log image properties after a short delay to allow image to load
+            setTimeout(() => {
+              const img = document.querySelector('#singleImageModal');
+              if (img && img.complete) {
+                console.log('=== Single Image Debug Info ===');
+                console.log('Image src:', img.src);
+                console.log('Natural width:', img.naturalWidth);
+                console.log('Natural height:', img.naturalHeight);
+                console.log('Display width:', img.clientWidth);
+                console.log('Display height:', img.clientHeight);
+                console.log('Offset width:', img.offsetWidth);
+                console.log('Offset height:', img.offsetHeight);
+                console.log('Computed style width:', getComputedStyle(img).width);
+                console.log('Computed style height:', getComputedStyle(img).height);
+                console.log('Computed style max-width:', getComputedStyle(img).maxWidth);
+                console.log('Computed style max-height:', getComputedStyle(img).maxHeight);
+                console.log('Image aspect ratio:', img.naturalWidth / img.naturalHeight);
+                console.log('Container width:', img.parentElement.clientWidth);
+                console.log('Container height:', img.parentElement.clientHeight);
+                console.log('Viewport width:', window.innerWidth);
+                console.log('Viewport height:', window.innerHeight);
+                console.log('Object-fit style:', getComputedStyle(img).objectFit);
+                console.log('Image class:', img.className);
+                console.log('Is original image?', src.includes('empty-room') || src.includes('static'));
+                console.log('Is generated image?', src.includes('generated') || src.includes('output'));
+                console.log('Image loaded?', img.complete);
+                console.log('Image loading state:', img.loading);
+                console.log('Scale factor (width):', img.clientWidth / img.naturalWidth);
+                console.log('Scale factor (height):', img.clientHeight / img.naturalHeight);
+                console.log('===============================');
+              } else {
+                console.log('Image not found or not loaded yet, retrying...');
+                // Try again after another delay if image isn't loaded
+                setTimeout(() => {
+                  const retryImg = document.querySelector('#singleImageModal');
+                  if (retryImg && retryImg.complete) {
+                    console.log('=== Single Image Debug Info (Retry) ===');
+                    console.log('Image src:', retryImg.src);
+                    console.log('Natural width:', retryImg.naturalWidth);
+                    console.log('Natural height:', retryImg.naturalHeight);
+                    console.log('Display width:', retryImg.clientWidth);
+                    console.log('Display height:', retryImg.clientHeight);
+                    console.log('Scale factor (width):', retryImg.clientWidth / retryImg.naturalWidth);
+                    console.log('Scale factor (height):', retryImg.clientHeight / retryImg.naturalHeight);
+                    console.log('=========================================');
+                  }
+                }, 500);
+              }
+            }, 200);
+          }
+        },
+
+        closeSingleImage() {
+          this.showSingleImageModal = false;
+          this.singleImageSrc = '';
+          // Restore body scrolling
+          document.body.style.overflow = 'auto';
+        },
+
+        // Auto-scroll functionality
+        scheduleAutoScroll() {
+          // Wait 1 second before auto-scrolling to results
+          setTimeout(() => {
+            this.autoScrollToResults();
+          }, 1000);
+        },
+
+        autoScrollToResults() {
+          // Find the results container and scroll to it smoothly
+          const resultsContainer = document.getElementById('cardsContainer');
+          if (resultsContainer && this.results.length > 0) {
+            resultsContainer.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
